@@ -1,0 +1,17 @@
+streamlit
+Pillow
+pandas
+matplotlib
+langchain
+langchain-text-splitters
+langchain-community
+langchain-openai
+python-dotenv
+dask
+xarray
+numpy
+torch
+scikit-learn
+seaborn
+requests
+tqdm
