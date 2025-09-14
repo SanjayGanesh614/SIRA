@@ -1,6 +1,11 @@
 import pandas as pd
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from dotenv import load_dotenv
+load_dotenv()
 
+os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # Configure the text splitter
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=2000,       # max chunk length (tokens ≈ characters / 4)
@@ -71,7 +76,7 @@ from langchain_openai import OpenAIEmbeddings
 # Embedding model
 embedding_model = OpenAIEmbeddings(
     model="text-embedding-3-small",  # cheap & fast; use "large" for accuracy
-    api_key="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"  # 🔒 replace with real key
+    api_key=OPENAI_API_KEY  # 🔒 replace with real key
 )
 
 # Chroma persistent vectorstore
@@ -106,10 +111,6 @@ from langchain.chat_models import init_chat_model
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain, RetrievalQA
 import os
-from dotenv import load_dotenv
-load_dotenv()
-
-os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")
 
 # Model-agnostic interface
 llm = init_chat_model("gemini-2.0-flash", model_provider="google_genai")

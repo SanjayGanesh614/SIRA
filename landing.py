@@ -308,6 +308,6 @@ st.markdown("""
 st.markdown("""
 <div class="footer-text">
     <p><strong>Float Chat</strong> • Where AI meets Oceanography • Discover the Future of Marine Science</p>
-    <p>🌊 Powered by Argo Float Data • Built with Streamlit & Advanced AI</p>
+    <p>🌊 Powered by Argo Float Data • Built By SIRA Team</p>
 </div>
 """, unsafe_allow_html=True)

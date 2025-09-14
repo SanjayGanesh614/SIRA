@@ -1,6 +1,6 @@
 /__pycache__
-/argo_nc_files/
-argo_data.db
+argo_nc_files/
 argo.db
-/uploads/
-/chroma_db/
+uploads/
+chroma_db/
+.env

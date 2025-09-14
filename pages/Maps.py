@@ -8,21 +8,27 @@ st.set_page_config(page_title="Buoy Map", layout="wide")
 
 st.title("🌊 Buoy Locations Map")
 
-# Load CSV
-df = pd.read_csv("argo_semantic_summary_1.csv")
+# --- Cache CSV loading ---
+@st.cache_data
+def load_data():
+    df = pd.read_csv("argo_semantic_summary_1.csv")
+    # Preprocess once: keep only unique lat-lon-region
+    return df[['latitude', 'longitude', 'region']].drop_duplicates()
 
-# Keep only unique lat-lon combinations with region
-unique_locations = df[['latitude', 'longitude', 'region']].drop_duplicates()
+unique_locations = load_data()
 
-# Create Folium map centered roughly in the Indian Ocean
-m = folium.Map(location=[0, 80], zoom_start=3)
+# --- Cache map creation ---
+@st.cache_resource
+def create_map(locations):
+    m = folium.Map(location=[0, 80], zoom_start=3)
+    for _, row in locations.iterrows():
+        folium.Marker(
+            location=[row['latitude'], row['longitude']],
+            popup=f"{row['region']} ({row['latitude']:.2f}, {row['longitude']:.2f})"
+        ).add_to(m)
+    return m
 
-# Add markers
-for _, row in unique_locations.iterrows():
-    folium.Marker(
-        location=[row['latitude'], row['longitude']],
-        popup=f"{row['region']} ({row['latitude']:.2f}, {row['longitude']:.2f})"
-    ).add_to(m)
+m = create_map(unique_locations)
 
 # Show map in Streamlit
 st_data = st_folium(m, width=800, height=600)

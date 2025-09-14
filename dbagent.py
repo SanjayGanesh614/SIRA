@@ -5,6 +5,10 @@ from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
 from langchain.schema import HumanMessage
 import os
+
+from dotenv import load_dotenv
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # ----------------------------
 # Step 1: Load CSV into SQLite
 # ----------------------------
@@ -86,7 +90,7 @@ prompt = PromptTemplate(
 llm = ChatOpenAI(
     model_name="gpt-3.5-turbo",
     temperature=0,
-    api_key="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"
+    api_key=OPENAI_API_KEY
 )
 
 # ----------------------------
@@ -105,14 +109,6 @@ def run_question(question: str, schema: str, conn: sqlite3.Connection) -> pd.Dat
     # Run the query in SQLite
     df_out = pd.read_sql_query(sql_query, conn)
     return df_out
-
-# ----------------------------
-# Step 6: Example
-# ----------------------------
-# question = "Show salinity (psal_adjusted) at depths below 500 dbar in the souther ocean."
-# result_df = run_question(question, schema, conn)
-
-# print("\nResult DataFrame:\n", result_df)
 
 def query_db_q(question: str,conn) -> pd.DataFrame:
     return run_question(question, schema, conn)
