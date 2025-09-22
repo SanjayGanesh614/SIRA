@@ -22,7 +22,7 @@ def integration(uuid,user_folder,argo_folder):
     conn=initialize_db(input_path=semantic_output_path, db_path=user_folder,user_id=uuid)
     return semantic_output_path,conn
 
-def netcdf_qa(question, user_id=None,semantic_output_path=None):
+def netcdf_qa(question, user_id=None):
     response = answer_query(question,user_id=user_id)
     return response
 

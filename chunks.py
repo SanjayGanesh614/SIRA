@@ -1,5 +1,6 @@
 import pandas as pd
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+import os
 from dotenv import load_dotenv
 load_dotenv()
 
