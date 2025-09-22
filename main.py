@@ -145,13 +145,7 @@ async def upload_files(request: Request, files: list[UploadFile] = File(...)):
         semantic_output_path, _ = await run_in_threadpool(
             integration, user_id, user_folder, argo_folder
         )
-        # Initialize DB
-        # conn = await run_in_threadpool(
-        #     initialize_db,
-        #     input_path=semantic_output_path,
-        #     db_path=user_folder,
-        #     user_id=user_id,
-        # )
+        
         # Store connection in memory per user if needed (optional)
         return {"status": "ok", "files": saved_paths}
     except Exception as e:
