@@ -188,3 +188,118 @@ async def download_csv(request: Request):
             semantic_csv, media_type="text/csv", filename=os.path.basename(semantic_csv)
         )
     return JSONResponse(status_code=404, content={"error": "CSV not found"})
+
+
+# this is the place wheree visulaization information will be supplied
+
+import pandas as pd
+
+# Assuming `app` already exists from previous code
+
+CSV_FILE = "argo_profiles_final.csv"
+
+try:
+    df_profiles = pd.read_csv(CSV_FILE)
+except FileNotFoundError:
+    df_profiles = None
+
+if df_profiles is not None:
+    # Convert pressure_bin into numeric midpoint
+    def get_midpoint(bin_str):
+        bin_str = bin_str.strip("()[]")
+        low, high = bin_str.split(",")
+        return (float(low) + float(high)) / 2
+
+    df_profiles["pressure_mid"] = df_profiles["pressure_bin"].apply(get_midpoint)
+
+    # Precompute aggregated dataframe
+    agg_df_profiles = df_profiles.groupby(["region", "pressure_mid"]).agg({
+        "temp_adjusted": "mean",
+        "psal_adjusted": "mean"
+    }).reset_index()
+else:
+    agg_df_profiles = pd.DataFrame()
+
+def graph_user(request:str):
+    user_id = get_user_id(request)
+    user_folder, argo_folder = get_user_paths(user_id)
+    user_csv = os.path.join(user_folder, "argo_profiles_final.csv")
+    try:
+        df_profiles = pd.read_csv(user_csv)
+    except FileNotFoundError:
+        df_profiles = None
+
+    if df_profiles is not None:
+        # Convert pressure_bin into numeric midpoint
+        def get_midpoint(bin_str):
+            bin_str = bin_str.strip("()[]")
+            low, high = bin_str.split(",")
+            return (float(low) + float(high)) / 2
+
+        df_profiles["pressure_mid"] = df_profiles["pressure_bin"].apply(get_midpoint)
+
+        # Precompute aggregated dataframe
+        agg_df_profiles = df_profiles.groupby(["region", "pressure_mid"]).agg({
+            "temp_adjusted": "mean",
+            "psal_adjusted": "mean"
+        }).reset_index()
+    else:
+        agg_df_profiles = pd.DataFrame()
+    return agg_df_profiles
+
+
+
+
+@app.get("/profiles/regions")
+def list_regions():
+    if agg_df_profiles.empty:
+        return JSONResponse({"regions": []})
+    regions = agg_df_profiles["region"].unique().tolist()
+    return {"regions": regions}
+
+@app.get("/profiles/data")
+def get_profile_data(region: str):
+    if agg_df_profiles.empty:
+        return JSONResponse({"error": "No data available"}, status_code=404)
+
+    subset = agg_df_profiles[agg_df_profiles["region"] == region]
+    if subset.empty:
+        return JSONResponse({"error": "Region not found"}, status_code=404)
+
+    # Return data points as JSON
+    data = {
+        "pressure_mid": subset["pressure_mid"].tolist(),
+        "temperature": subset["temp_adjusted"].tolist(),
+        "salinity": subset["psal_adjusted"].tolist()
+    }
+
+    return {"region": region, "data": data}
+
+
+@app.get("/users/profiles/regions")
+def users_list_regions(request: Request):
+    user_agg_df_profiles = graph_user(request)
+    if user_agg_df_profiles.empty:
+        return JSONResponse({"regions": []})
+    regions = user_agg_df_profiles["region"].unique().tolist()
+    return {"regions": regions}
+
+@app.get("/users/profiles/data")
+def users_get_profile_data(request: Request,region: str):
+    user_agg_df_profiles = graph_user(request)
+    # print(user_agg_df_profiles.head())
+    if user_agg_df_profiles.empty:
+        return JSONResponse({"error": "No data available"}, status_code=404)
+
+    subset = user_agg_df_profiles[user_agg_df_profiles["region"] == region]
+    if subset.empty:
+        return JSONResponse({"error": "Region not found"}, status_code=404)
+
+    # Return data points as JSON
+    data = {
+        "pressure_mid": subset["pressure_mid"].tolist(),
+        "temperature": subset["temp_adjusted"].tolist(),
+        "salinity": subset["psal_adjusted"].tolist()
+    }
+
+    return {"region": region, "data": data}
