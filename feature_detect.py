@@ -120,27 +120,25 @@ def run_feature_detection(train=True, input_csv='biogeodata.csv',
     window_size = 10
 
     # Fit or load scaler
-    if train or (not os.path.exists(scaler_path)):
+    if (not train) and os.path.exists(scaler_path):
+        scaler = joblib.load(scaler_path)
+        features_normalized = scaler.transform(features)
+        print(f"Scaler loaded from {scaler_path}")
+    else:
         scaler = StandardScaler()
         features_normalized = scaler.fit_transform(features)
         joblib.dump(scaler, scaler_path)
         print(f"Scaler trained and saved to {scaler_path}")
-    else:
-        # In test mode, do not load saved scaler, just print message and use unscaled features
-        if not train:
-            print("Test mode: Not loading saved scaler, using unscaled features")
-            features_normalized = features
-            scaler = None
-        else:
-            scaler = joblib.load(scaler_path)
-            features_normalized = scaler.transform(features)
-            print(f"Scaler loaded from {scaler_path}")
 
     sequences = create_sequences(features_normalized, window_size)
     metadata = df_sorted[['time', 'latitude', 'longitude', 'depth']].iloc[window_size-1:].reset_index(drop=True)
     X_tensor = torch.tensor(sequences, dtype=torch.float32)
 
-    if train or (not os.path.exists(model_path)):
+    if (not train) and os.path.exists(model_path):
+        model.load_state_dict(torch.load(model_path))
+        model.eval()
+        print(f"LSTM Autoencoder model loaded from {model_path}")
+    else:
         train_size = int(0.8 * len(X_tensor))
         train_data = X_tensor[:train_size]
         val_data = X_tensor[train_size:]
@@ -153,14 +151,6 @@ def run_feature_detection(train=True, input_csv='biogeodata.csv',
         train_losses, val_losses = train_model(model, train_loader, val_loader, optimizer, criterion, epochs=25)
         torch.save(model.state_dict(), model_path)
         print(f"LSTM Autoencoder model trained and saved to {model_path}")
-    else:
-        # In test mode, do not load saved model, just print message
-        if not train:
-            print("Test mode: Not loading saved LSTM Autoencoder model")
-        else:
-            model.load_state_dict(torch.load(model_path))
-            model.eval()
-            print(f"LSTM Autoencoder model loaded from {model_path}")
 
     # Anomaly detection
     all_data_loader = DataLoader(OceanDataset(X_tensor), batch_size=32, shuffle=False)
@@ -254,7 +244,10 @@ def run_feature_detection(train=True, input_csv='biogeodata.csv',
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y_encoded, test_size=0.3, random_state=42, stratify=y_encoded
             )
-        if train or (not os.path.exists(xgb_path)):
+        if (not train) and os.path.exists(xgb_path):
+            xgb_model = joblib.load(xgb_path)
+            print(f"XGBoost classifier loaded from {xgb_path}")
+        else:
             xgb_model = xgb.XGBClassifier(
                 objective='multi:softmax',
                 num_class=len(label_encoder.classes_),
@@ -266,14 +259,6 @@ def run_feature_detection(train=True, input_csv='biogeodata.csv',
             xgb_model.fit(X_train, y_train)
             joblib.dump(xgb_model, xgb_path)
             print(f"XGBoost classifier trained and saved to {xgb_path}")
-        else:
-            # In test mode, do not load saved classifier, just print message
-            if not train:
-                print("Test mode: Not loading saved XGBoost classifier")
-                xgb_model = None
-            else:
-                xgb_model = joblib.load(xgb_path)
-                print(f"XGBoost classifier loaded from {xgb_path}")
 
         if xgb_model is not None:
             all_predictions = xgb_model.predict(X)
