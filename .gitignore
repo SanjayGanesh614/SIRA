@@ -4,3 +4,4 @@ argo.db
 uploads/
 chroma_db/
 .env
+example_dataset.csv
