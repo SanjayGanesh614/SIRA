@@ -67,3 +67,4 @@ def main_process(save_path="argo_profiles_binned_1.csv",nc_data_dir="argo_nc_fil
 #make it such that the  data is stored in sql database 
 # create a few different graphs
 #search datafram to sql
+#based on the main.py make api calls to give data of graphs 
