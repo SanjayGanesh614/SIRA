@@ -13,6 +13,64 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import classification_report, confusion_matrix
 import joblib
 import os
+import warnings
+warnings.filterwarnings('ignore')
+
+def validate_dataset(df):
+    """Validate that the uploaded dataset has the required columns and data types"""
+    required_columns = ['time', 'latitude', 'longitude', 'depth', 'Temperature', 'CTD_Salinity', 'Oxygen_1', 'CO2', 'TOC', 'POC', 'NO3_plus_NO2', 'PO4', 'Silicate']
+    
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    if missing_columns:
+        return False, f"Missing required columns: {missing_columns}"
+    
+    # Check if there's enough data
+    if len(df) < 10:
+        return False, "Dataset must have at least 10 rows"
+    
+    # Check for non-numeric values in numeric columns
+    numeric_columns = ['latitude', 'longitude', 'depth', 'Temperature', 'CTD_Salinity', 'Oxygen_1', 'CO2', 'TOC', 'POC', 'NO3_plus_NO2', 'PO4', 'Silicate']
+    for col in numeric_columns:
+        if col in df.columns:
+            non_numeric_count = pd.to_numeric(df[col], errors='coerce').isna().sum()
+            if non_numeric_count > len(df) * 0.5:  # More than 50% non-numeric
+                return False, f"Column '{col}' has too many non-numeric values"
+    
+    return True, "Dataset validation passed"
+
+def preprocess_user_dataset(df):
+    """Preprocess user-uploaded dataset to match expected format"""
+    try:
+        # Create a copy to avoid modifying original
+        df_clean = df.copy()
+        
+        # Convert time column to datetime
+        if 'time' in df_clean.columns:
+            df_clean['time'] = pd.to_datetime(df_clean['time'], errors='coerce')
+        
+        # Convert numeric columns
+        numeric_columns = ['latitude', 'longitude', 'depth', 'Temperature', 'CTD_Salinity', 'Oxygen_1', 'CO2', 'TOC', 'POC', 'NO3_plus_NO2', 'PO4', 'Silicate']
+        for col in numeric_columns:
+            if col in df_clean.columns:
+                df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce')
+        
+        # Remove rows with all NaN values in key columns
+        key_columns = ['Temperature', 'CTD_Salinity', 'Oxygen_1', 'NO3_plus_NO2', 'TOC']
+        df_clean = df_clean.dropna(subset=key_columns, how='all')
+        
+        # Fill missing values with median for numeric columns
+        for col in numeric_columns:
+            if col in df_clean.columns:
+                df_clean[col] = df_clean[col].fillna(df_clean[col].median())
+        
+        # Sort by time if available
+        if 'time' in df_clean.columns:
+            df_clean = df_clean.sort_values('time').reset_index(drop=True)
+        
+        return df_clean, "Dataset preprocessed successfully"
+    
+    except Exception as e:
+        return None, f"Error preprocessing dataset: {str(e)}"
 
 def get_depth_based_thresholds(depth):
     """Define depth-based thresholds for synthetic labeling"""
@@ -99,19 +157,38 @@ def calculate_reconstruction_errors(model, data_loader, return_reconstructions=F
 def run_feature_detection(train=True, input_csv='biogeodata.csv',
                          model_path='lstm_autoencoder.pth',
                          scaler_path='scaler.save',
-                         xgb_path='xgb_classifier.save'):
+                         xgb_path='xgb_classifier.save',
+                         is_user_dataset=False):
 
     # Load the dataset
     df = pd.read_csv(input_csv)
-    df_clean = df.iloc[1:].copy()
-    df_clean['time'] = pd.to_datetime(df_clean['time'])
-    df_clean['latitude'] = pd.to_numeric(df_clean['latitude'])
-    df_clean['longitude'] = pd.to_numeric(df_clean['longitude'])
-    df_clean['depth'] = pd.to_numeric(df_clean['depth'])
+    
+    # Handle user datasets differently
+    if is_user_dataset:
+        # Validate user dataset
+        is_valid, validation_message = validate_dataset(df)
+        if not is_valid:
+            return f"Dataset validation failed: {validation_message}"
+        
+        # Preprocess user dataset
+        df_clean, preprocess_message = preprocess_user_dataset(df)
+        if df_clean is None:
+            return f"Dataset preprocessing failed: {preprocess_message}"
+        
+        print(f"User dataset validation: {validation_message}")
+        print(f"User dataset preprocessing: {preprocess_message}")
+    else:
+        # Original processing for default datasets
+        df_clean = df.iloc[1:].copy()
+        df_clean['time'] = pd.to_datetime(df_clean['time'])
+        df_clean['latitude'] = pd.to_numeric(df_clean['latitude'])
+        df_clean['longitude'] = pd.to_numeric(df_clean['longitude'])
+        df_clean['depth'] = pd.to_numeric(df_clean['depth'])
 
-    ocean_vars = ['Temperature', 'CTD_Salinity', 'Oxygen_1', 'CO2', 'TOC', 'POC', 'NO3_plus_NO2', 'PO4', 'Silicate']
-    for var in ocean_vars:
-        df_clean[var] = pd.to_numeric(df_clean[var], errors='coerce')
+        ocean_vars = ['Temperature', 'CTD_Salinity', 'Oxygen_1', 'CO2', 'TOC', 'POC', 'NO3_plus_NO2', 'PO4', 'Silicate']
+        for var in ocean_vars:
+            df_clean[var] = pd.to_numeric(df_clean[var], errors='coerce')
+    
     selected_features = ['Temperature', 'CTD_Salinity', 'Oxygen_1', 'NO3_plus_NO2', 'TOC']
     df_sorted = df_clean.sort_values('time').reset_index(drop=True)
     features = df_sorted[selected_features].values

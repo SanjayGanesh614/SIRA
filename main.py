@@ -152,6 +152,55 @@ async def upload_files(request: Request, files: list[UploadFile] = File(...)):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 # -----------------------
+# Dataset upload for model testing
+# -----------------------
+@app.post("/user/upload/dataset")
+async def upload_dataset(request: Request, file: UploadFile = File(...)):
+    """Upload a CSV dataset for model testing"""
+    user_id = get_user_id(request)
+    user_folder, _ = get_user_paths(user_id)
+    
+    # Validate file type
+    if not file.filename.endswith('.csv'):
+        return JSONResponse(status_code=400, content={"error": "Only CSV files are supported"})
+    
+    # Save the dataset
+    dataset_path = os.path.join(user_folder, f"user_dataset_{file.filename}")
+    with open(dataset_path, "wb") as f:
+        f.write(await file.read())
+    
+    return {"status": "ok", "dataset_path": dataset_path, "filename": file.filename}
+
+# -----------------------
+# Model testing with user dataset
+# -----------------------
+@app.post("/user/test/model")
+async def test_model_with_dataset(request: Request, dataset_filename: str):
+    """Test the anomaly detection model with user's uploaded dataset"""
+    user_id = get_user_id(request)
+    user_folder, _ = get_user_paths(user_id)
+    dataset_path = os.path.join(user_folder, f"user_dataset_{dataset_filename}")
+    
+    if not os.path.exists(dataset_path):
+        return JSONResponse(status_code=404, content={"error": "Dataset not found"})
+    
+    try:
+        # Import the feature detection function
+        from feature_detect import run_feature_detection
+        
+        # Run model testing with user's dataset
+        result = await run_in_threadpool(
+            run_feature_detection, 
+            train=False, 
+            input_csv=dataset_path,
+            is_user_dataset=True
+        )
+        
+        return {"status": "ok", "result": result}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+# -----------------------
 # Chat endpoints
 # -----------------------
 
