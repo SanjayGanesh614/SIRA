@@ -81,7 +81,8 @@ embedding_model = OpenAIEmbeddings(
 )
 
 # Chroma persistent vectorstore
-persist_directory = r"C:\Users\vijay\Documents\SANJAY\SIRA\chroma_db"
+persist_directory = "./chroma_db"
+# r"C:\Users\vijay\Documents\SANJAY\SIRA\chroma_db"
 vectorstore = Chroma(
     collection_name="argo_profiles",
     embedding_function=embedding_model,

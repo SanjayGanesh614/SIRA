@@ -1,10 +1,16 @@
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_openai import OpenAIEmbeddings
+
+import os
+
+from dotenv import load_dotenv
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # Embedding model
 embedding_model = OpenAIEmbeddings(
     model="text-embedding-3-small",  # cheap & fast; use "large" for accuracy
-    api_key="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"  # 🔒 replace with real key
+    api_key=OPENAI_API_KEY  # 🔒 replace with real key
 )
 
 # Chroma persistent vectorstore
