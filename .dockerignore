@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 *.pyd
 *.log
+*.md
 
 # Ignore local env files (manage env vars outside container for prod)
 .env

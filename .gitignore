@@ -5,3 +5,4 @@ uploads/
 chroma_db/
 .env
 example_dataset.csv
+buoy_map.html

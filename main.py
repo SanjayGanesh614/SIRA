@@ -20,40 +20,39 @@ from integration import integration, netcdf_qa, sql_qa
 
 app = FastAPI(title="Multi-Model Chat API")
 
-origins = [
-    # "http://localhost:5173",  # React dev server
-    "*",
-]
-
-# Configure CORS middleware
+# CORS must come first!
 app.add_middleware(
     CORSMiddleware,
-    allow_origins = origins,  # Explicitly list allowed origins
-    allow_credentials = True,  # Allow cookies and credentials
-    allow_methods = ["*"],  # Allow all HTTP methods
-    allow_headers = ["*"],  # Allow all headers
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
+# Session after CORS
 app.add_middleware(
     SessionMiddleware,
     secret_key=os.getenv("SESSION_SECRET_KEY", secrets.token_hex(16)),
-    same_site="none",  # Required for cross-origin cookies
-    https_only=True,  # Ensure cookies are sent only over HTTPS
-    max_age= 3600,  # Set cookie expiration time (1 hour)
-)
-@app.middleware("http") 
-async def update_session_timeout(request: Request, call_next): 
-    response = await call_next(request) 
-    if "session" in request.session: 
-        # response.set_cookie("session", request.cookies["session"], max_age= 3600, httponly=True, samesite="strict", secure=True) #local
-        response.set_cookie(
-    key="session",
-    value=request.cookies.get("session", ""),  # safer: returns empty string if not present
+    same_site="none",   # allow cross-site cookies
+    https_only=True,    # only over HTTPS
     max_age=3600,
-    httponly=True,
-    samesite="none",   # allow same-site requests plus normal form submissions
-    # secure=True       
 )
+
+@app.middleware("http")
+async def update_session_timeout(request: Request, call_next):
+    response = await call_next(request)
+
+    # ✅ Only set cookie if request has session (avoid OPTIONS errors)
+    if "session" in request.session and "session" in request.cookies:
+        response.set_cookie(
+            key="session",
+            value=request.cookies.get("session", ""),
+            max_age=3600,
+            httponly=True,
+            samesite="none",
+            # secure=True   # enable once HTTPS everywhere
+        )
+
     return response
 
 
@@ -186,15 +185,16 @@ async def test_model_with_dataset(request: Request, dataset_filename: str):
     
     try:
         # Import the feature detection function
-        from feature_detect import run_feature_detection
+        # from feature_detect import run_feature_detection
         
-        # Run model testing with user's dataset
-        result = await run_in_threadpool(
-            run_feature_detection, 
-            train=False, 
-            input_csv=dataset_path,
-            is_user_dataset=True
-        )
+        # # Run model testing with user's dataset
+        # result = await run_in_threadpool(
+        #     run_feature_detection, 
+        #     train=False, 
+        #     input_csv=dataset_path,
+        #     is_user_dataset=True
+        # )
+        result = "Model testing logic not implemented yet."
         
         return {"status": "ok", "result": result}
     except Exception as e:
