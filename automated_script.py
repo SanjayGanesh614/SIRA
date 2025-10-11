@@ -17,7 +17,7 @@ os.makedirs(output_dir, exist_ok=True)
 df = pd.read_csv(index_file)
 
 # Iterate through file paths and download
-for file_path in tqdm(df["file_path"][1500:], desc="Downloading files"):
+for file_path in tqdm(df["file_path"][250:1500], desc="Downloading files"):
     # Construct full URL
     url = BASE_URL + file_path
     
