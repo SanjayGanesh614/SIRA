@@ -1,0 +1,229 @@
+Frontend Components Specification (for AI prompt)
+
+Purpose
+Describe the frontend components to build for three areas—Maps, Graphs, and Anomaly Detection Models—so an AI can generate UI code. Each component includes a short description of responsibilities and key props/interactions.
+
+---
+SECTION 1: MAPS
+
+1) MapView
+- Renders the base interactive map (pan/zoom)
+- Props: center(lat, lon), zoom, bounds, layers[]
+- Emits: onMove, onZoom, onClick(coordinates)
+
+2) BasemapSwitcher
+- Switch between basemap styles (satellite, terrain, light, dark)
+- Props: options[], selected
+- Emits: onChange(styleId)
+
+3) LayerTogglePanel
+- Toggle visibility of map layers (e.g., ARGO floats, heatmap, contours)
+- Props: layers[{id, name, visible, legend?}]
+- Emits: onToggle(layerId, visible)
+
+4) Legend
+- Display color scales, symbols, and units for active layers
+- Props: items[], position, collapsible
+
+5) TimeSlider
+- Select a time or range to filter map data
+- Props: startTime, endTime, value or range
+- Emits: onChange(timeValue or [start, end])
+
+6) FilterPanel
+- Filter data by region, depth, parameter (e.g., temperature, salinity), quality flags
+- Props: filterSchema, values
+- Emits: onApply(values), onReset()
+
+7) SearchLocation
+- Search by place name or coordinates; recent searches
+- Props: query, results[]
+- Emits: onSelect(coordinates)
+
+8) DrawTools
+- Draw/select regions (polygon/rectangle) to query/export data
+- Emits: onCreate(geometry), onEdit(geometry), onDelete(id)
+
+9) MarkerClusterLayer
+- Cluster ARGO/buoy markers with counts and popups
+- Props: data[], popupRenderer(item)
+
+10) HeatmapLayer
+- Render heatmap for selected parameter and time
+- Props: data[], colorScale, radius, intensity
+
+11) ContourLayer
+- Iso-lines/contours for gridded variables
+- Props: dataGrid, levels[], colorScale
+
+12) Tooltip/Popup
+- Contextual info on hover/click of features
+- Props: contentRenderer(item), position
+
+13) ScaleBar + CoordinatesDisplay
+- Show map scale and live cursor coordinates
+
+14) GeoJSONUploader
+- Upload custom regions/routes to overlay
+- Emits: onLoad(geojson)
+
+15) ExportMap
+- Export current map view as PNG/SVG and save layer config
+- Props: filename, includeLegend
+
+---
+SECTION 2: GRAPHS
+
+1) ChartContainer
+- Shared layout/responsive wrapper for charts with title, subtitle, toolbar
+- Props: title, description, actions[]
+
+2) TimeSeriesChart
+- Plot variable over time with zoom/pan and brushing
+- Props: series[{id, name, data:[{t, y}], color}], yAxis label, unit
+- Emits: onBrush([tStart, tEnd])
+
+3) MultiAxisChart
+- Multiple Y-axes for variables with different units (e.g., temp vs salinity)
+- Props: leftSeries[], rightSeries[]
+
+4) ScatterPlot
+- X-Y relationships with density option
+- Props: points[{x, y, meta}], colorBy, sizeBy
+
+5) Histogram
+- Distribution of a variable with bins control
+- Props: data[], bins, color
+
+6) BoxWhiskerPlot
+- Summary stats per group (e.g., region, month)
+- Props: groups[], valuesByGroup
+
+7) CorrelationMatrix
+- Heatmap of pairwise correlations
+- Props: variables[], matrix[][], colorScale
+
+8) AnomalyOverlay
+- Overlay predicted anomalies on time series or scatter plots
+- Props: anomalies[{t or x,y, score, label}]
+
+9) ThresholdSlider
+- Adjust anomaly threshold and update counts/precision-recall
+- Props: value, min, max
+- Emits: onChange(value)
+
+10) RangePicker
+- Select date/time range for all charts
+- Props: start, end
+- Emits: onChange([start, end])
+
+11) Tooltip + Crosshair
+- Shared tooltip across synchronized charts
+
+12) Legend + SeriesToggle
+- Enable/disable series visibility
+
+13) ExportChart
+- Download as PNG/SVG/CSV (data)
+
+14) LoadingState / EmptyState / ErrorState
+- Standardized visual states for data fetching
+
+---
+SECTION 3: ANOMALY DETECTION MODELS
+
+1) ModelSelector
+- Choose model type (LSTM Autoencoder, XGBoost, Isolation Forest, etc.)
+- Props: options[], selected
+- Emits: onChange(modelId)
+
+2) DatasetUploader
+- Upload CSV or connect to existing datasets (ARGO profiles, buoys, synthetic)
+- Props: acceptedTypes, maxSize
+- Emits: onLoad(datasetId or file)
+
+3) FeatureSelector
+- Choose features (temperature, salinity, oxygen, depth, etc.) and transformations
+- Props: availableFeatures[], selectedFeatures[]
+- Emits: onChange(selectedFeatures)
+
+4) ParameterForm
+- Dynamic hyperparameters per model type (learning rate, window size, estimators)
+- Props: schema, values
+- Emits: onChange(values)
+
+5) TrainRunControls
+- Start/stop training or scoring; show progress and ETA
+- Emits: onStart(config), onCancel(), onScore(config)
+
+6) JobStatusPanel
+- Track background jobs (queued, running, completed, failed) with logs
+- Props: jobs[], selectedJobId
+
+7) MetricsPanel
+- Display metrics (loss curves, ROC/PR, F1, precision, recall, AUC, MAE)
+- Props: metricsData
+
+8) ConfusionMatrix
+- For classifiers; supports threshold selection
+- Props: matrix, labels
+
+9) ROCandPRCurves
+- Interactive curves with markers at current threshold
+- Props: rocPoints[], prPoints[], threshold
+
+10) ThresholdTuner
+- Global threshold control syncing with charts and anomaly table
+- Props: value, range
+
+11) AnomalyTable
+- Paginated table of detected anomalies with score, metadata, and actions
+- Props: rows[], columns[]; supports sort/filter/export
+
+12) AnomalyDetailDrawer
+- Drill-down view with raw profile/segment, contextual map, and chart overlays
+- Props: itemId, data
+
+13) CompareModelsView
+- Side-by-side metrics and qualitative comparison with linked brushing
+- Props: models[], metrics[]
+
+14) ExplainabilityPanel
+- SHAP/feature importance and counterfactuals (where applicable)
+- Props: importance[], explanations[]
+
+15) AlertsConfig
+- Configure alert rules (thresholds, regions, variables) and notification channels
+- Props: rules[]
+
+16) SaveLoadConfig
+- Save/load model + visualization presets; persistent via API
+- Emits: onSave(config), onLoad(configId)
+
+17) AccessGuard
+- Gate model actions for authorized users only
+
+---
+CROSS-CUTTING (Shared Infrastructure)
+
+- State Management
+  Central store for filters, time ranges, map/layer state, selected dataset/model, and anomalies
+
+- API Service Layer
+  Typed client for dataset queries, model training/scoring, job status, and exports
+
+- Layout & Theming
+  Responsive grid, light/dark themes, accessibility (keyboard, ARIA)
+
+- ErrorBoundary
+  Capture and display recoverable UI errors without full app crash
+
+- Internationalization (optional)
+  Strings externalized for future locales
+
+---
+DELIVERABLE NOTES FOR AI
+- Generate modular, testable components with clear props and event contracts
+- Prefer composition over monolithic components; keep presentational vs. container roles separate
+- Include story/examples for each component to demonstrate usage and states
+- Ensure performance: virtualization for large tables, debounced filters, memoization
